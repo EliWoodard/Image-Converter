@@ -5,44 +5,113 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
+import javax.swing.*;
 
 public class Main {
     
     public static void main(String[] args) {
         String inputPath = "Convert-Images"; // Path to folder containing images to convert
         String outputPath = "Convert-Images-BW"; // Path to folder to save converted images
-        convertImagesToBW(inputPath, outputPath); // Convert images in folder to black and white
-        String inputFilePath = "Convert-Image/input.jpg"; // Path to image to convert
-        String outputFilePath = "Convert-Image/output.jpg"; // Path to save converted image
-        convertImageToBW(inputFilePath, outputFilePath); // Convert single image to black and white
-    }
-    
-    // Convert all images in a folder to black and white
-    public static void convertImagesToBW(String inputPath, String outputPath) {
-        File inputFolder = new File(inputPath);
-        File[] files = inputFolder.listFiles();
-        for (File file : files) {
-            if (file.isFile()) {
-                String outputFilePath = outputPath + "/" + file.getName();
-                convertImageToBW(file.getPath(), outputFilePath);
-            }
+        String outputFormat = "jpg"; // Default output format
+        boolean showProgressBar = true; // Set to true to show progress bar
+        if (args.length > 0 && args[0].equals("-delete")) { // check if the argument is -delete
+            deleteDirectory(new File(inputPath));
+            deleteDirectory(new File(outputPath));
+            System.out.println("All files deleted.");
+        } else {
+            convertImagesToBW(inputPath, outputPath, outputFormat, showProgressBar); // Convert images in folder to black and white
+            // String inputFilePath = "Convert-Image/input.jpg"; // Path to image to convert
+            // String outputFilePath = "Convert-Image/output.jpg"; // Path to save converted image
+            // convertImageToBW(inputFilePath, outputFilePath, outputFormat); // Convert single image to black and white
         }
     }
     
+    // Convert all images in a folder to black and white
+    public static void convertImagesToBW(String inputPath, String outputPath, String outputFormat, boolean showProgressBar) {
+        File inputFolder = new File(inputPath);
+        File[] files = inputFolder.listFiles();
+        int numFiles = files.length;
+        int numConverted = 0;
+        JProgressBar progressBar = null;
+        JFrame frame = null;
+        if (showProgressBar) {
+            progressBar = new JProgressBar(0, numFiles);
+            progressBar.setValue(0);
+            progressBar.setStringPainted(true);
+            frame = new JFrame("Converting Images");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.add(progressBar);
+            frame.pack();
+            frame.setVisible(true);
+        }
+        for (File file : files) {
+            if (file.isFile()) {
+                String outputFilePath = outputPath + "/" + getFileNameWithoutExtension(file.getName()) + "." + outputFormat;
+                convertImageToBW(file.getPath(), outputFilePath, outputFormat);
+                numConverted++;
+                if (showProgressBar && progressBar != null) {
+                    progressBar.setValue(numConverted);
+                }
+            }
+        }
+        if (showProgressBar && frame != null) {
+            JOptionPane.showMessageDialog(null, "Conversion complete!");
+            frame.dispose();
+        }
+    }
+
+
+    
     // Convert a single image to black and white
-    public static void convertImageToBW(String inputFilePath, String outputFilePath) {
+    public static void convertImageToBW(String inputFilePath, String outputFilePath, String outputFormat) {
         try {
-            BufferedImage image = ImageIO.read(new File(inputFilePath));
+            File inputFile = new File(inputFilePath);
+            if (!inputFile.exists()) {
+                System.out.println("Input file does not exist: " + inputFilePath);
+                return;
+            }
+            BufferedImage image = ImageIO.read(inputFile);
+            if (image == null) {
+                System.out.println("Unsupported image format: " + inputFilePath);
+                return;
+            }
             BufferedImage bwImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
             Graphics2D graphics = bwImage.createGraphics();
             graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
             graphics.drawImage(image, 0, 0, null);
             graphics.dispose();
-            ImageIO.write(bwImage, "jpg", new File(outputFilePath));
+            ImageIO.write(bwImage, outputFormat, new File(outputFilePath));
             System.out.println("Image converted to black and white: " + outputFilePath);
         } catch (IOException e) {
-            System.out.println("Error converting image to black and white: " + inputFilePath);
-            e.printStackTrace();
+        System.out.println("Error converting image to black and white: " + inputFilePath);
+        e.printStackTrace();
+        }
+    }
+    
+    // Get the file name without the extension
+    public static String getFileNameWithoutExtension(String fileName) {
+        int dotIndex = fileName.lastIndexOf(".");
+        if (dotIndex == -1) {
+            return fileName;
+        } else {
+            return fileName.substring(0, dotIndex);
+        }
+    }
+
+    // Delete all files in a directory
+    public static void deleteDirectory(File directory) {
+        if (directory.isDirectory()) {
+            File[] files = directory.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isDirectory()) {
+                        deleteDirectory(file);
+                    } else {
+                        file.delete();
+                    }
+                }
+            }
         }
     }
 }
+
