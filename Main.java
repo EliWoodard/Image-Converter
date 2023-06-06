@@ -6,62 +6,34 @@ import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.*;
-
-/**
- * The Image Converter program converts images to black and white, either for a
- * single image or all images in a specified folder. Progress can be displayed
- * using a progress bar. The program can also delete all files in the input and
- * output folders using the -delete command line argument.
- * 
- * @version 1.0
- * @author Eli Woodard
- */
+import java.util.Scanner;
 
 public class Main {
 
-    /**
-     * The main method of the Image Converter program. Converts all images in a
-     * specified input folder to black and white,
-     * and saves them in a specified output folder. Progress can be displayed using
-     * a progress bar. The program can also delete
-     * all files in the input and output folders using the -delete command line
-     * argument.
-     *
-     * @param args Command line arguments. The program accepts the -delete argument
-     *             to delete all files in the input and output
-     *             folders.
-     */
     public static void main(String[] args) {
-        String inputPath = "Convert-Images"; // Path to folder containing images to convert
-        String outputPath = "Convert-Images-BW"; // Path to folder to save converted images
-        String outputFormat = "jpg"; // Default output format
-        boolean showProgressBar = true; // Set to true to show progress bar
-        if (args.length > 0 && args[0].equals("-delete")) { // check if the argument is -delete
-            deleteDirectory(new File(inputPath));
-            deleteDirectory(new File(outputPath));
-            System.out.println("All files deleted.");
+        String inputPath = "input";
+        String outputPath = "output";
+        String outputFormat = "jpg";
+        boolean showProgressBar = true;
+
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Do you want to make images brighter/dimmer or convert to black and white? (black & white(1), brightness(2))");
+        String userChoice = scanner.nextLine().toLowerCase();
+
+        if (userChoice.equals("1")) {
+            convertImagesToBW(inputPath, outputPath, outputFormat, showProgressBar);
+        } else if (userChoice.equals("2")) {
+            System.out.println("Enter the percentage for brightness adjustment:");
+            int brightnessPercentage = scanner.nextInt();
+            adjustImageBrightness(inputPath, outputPath, outputFormat, brightnessPercentage, showProgressBar);
         } else {
-            convertImagesToBW(inputPath, outputPath, outputFormat, showProgressBar); // Convert images in folder to
-                                                                                     // black and white
-            // String inputFilePath = "Convert-Image/input.jpg"; // Path to image to convert
-            // String outputFilePath = "Convert-Image/output.jpg"; // Path to save converted
-            // image
-            // convertImageToBW(inputFilePath, outputFilePath, outputFormat); // Convert
-            // single image to black and white
+            System.out.println("Invalid choice. Please choose either 'b/w', 'brighter', or 'dimmer'.");
         }
+
+        scanner.close();
     }
 
-    /**
-     * Convert all images in a folder to black and white.
-     *
-     * @param inputPath       the path to the input folder containing images to
-     *                        convert
-     * @param outputPath      the path to the output folder to save converted images
-     * @param outputFormat    the output format of the converted images
-     * @param showProgressBar whether to display a progress bar during conversion
-     */
-    public static void convertImagesToBW(String inputPath, String outputPath, String outputFormat,
-            boolean showProgressBar) {
+    public static void convertImagesToBW(String inputPath, String outputPath, String outputFormat, boolean showProgressBar) {
         File inputFolder = new File(inputPath);
         File[] files = inputFolder.listFiles();
         int numFiles = files.length;
@@ -80,8 +52,7 @@ public class Main {
         }
         for (File file : files) {
             if (file.isFile()) {
-                String outputFilePath = outputPath + "/" + getFileNameWithoutExtension(file.getName()) + "."
-                        + outputFormat;
+                String outputFilePath = outputPath + "/" + getFileNameWithoutExtension(file.getName()) + "." + outputFormat;
                 convertImageToBW(file.getPath(), outputFilePath, outputFormat);
                 numConverted++;
                 if (showProgressBar && progressBar != null) {
@@ -90,76 +61,91 @@ public class Main {
             }
         }
         if (showProgressBar && frame != null) {
-            JOptionPane.showMessageDialog(null, "Conversion complete!");
+            JOptionPane.showMessageDialog(frame, "Conversion complete!");
+            frame.dispose();
+        }
+    }    
+
+    public static void adjustImageBrightness(String inputPath, String outputPath, String outputFormat, int brightnessPercentage, boolean showProgressBar) {
+        File inputFolder = new File(inputPath);
+        File[] files = inputFolder.listFiles();
+        int numFiles = files.length;
+        int numConverted = 0;
+        JProgressBar progressBar = null;
+        JFrame frame = null;
+        if (showProgressBar) {
+            progressBar = new JProgressBar(0, numFiles);
+            progressBar.setValue(0);
+            progressBar.setStringPainted(true);
+            frame = new JFrame("Adjusting Image Brightness");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.add(progressBar);
+            frame.pack();
+            frame.setVisible(true);
+        }
+        for (File file : files) {
+            if (file.isFile()) {
+                String outputFilePath = outputPath + "/" + getFileNameWithoutExtension(file.getName()) + "." + outputFormat;
+                adjustBrightness(file.getPath(), outputFilePath, outputFormat, brightnessPercentage);
+                numConverted++;
+                if (showProgressBar && progressBar != null) {
+                    progressBar.setValue(numConverted);
+                }
+            }
+        }
+        if (showProgressBar && frame != null) {
+            JOptionPane.showMessageDialog(null, "Brightness adjustment complete!");
             frame.dispose();
         }
     }
 
-    /**
-     * Convert a single image to black and white.
-     *
-     * @param inputFilePath  the path to the input image to convert
-     * @param outputFilePath the path to the output image to save
-     * @param outputFormat   the output format of the converted image
-     */
-    public static void convertImageToBW(String inputFilePath, String outputFilePath, String outputFormat) {
+    public static void adjustBrightness(String inputFilePath, String outputFilePath, String outputFormat, int brightnessPercentage) {
         try {
-            File inputFile = new File(inputFilePath);
-            if (!inputFile.exists()) {
-                System.out.println("Input file does not exist: " + inputFilePath);
-                return;
-            }
-            BufferedImage image = ImageIO.read(inputFile);
-            if (image == null) {
-                System.out.println("Unsupported image format: " + inputFilePath);
-                return;
-            }
-            BufferedImage bwImage = new BufferedImage(image.getWidth(), image.getHeight(),
-                    BufferedImage.TYPE_BYTE_GRAY);
-            Graphics2D graphics = bwImage.createGraphics();
-            graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            graphics.drawImage(image, 0, 0, null);
-            graphics.dispose();
-            ImageIO.write(bwImage, outputFormat, new File(outputFilePath));
-            System.out.println("Image converted to black and white: " + outputFilePath);
-        } catch (IOException e) {
-            System.out.println("Error converting image to black and white: " + inputFilePath);
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Returns the name of the file without its extension.
-     * 
-     * @param fileName the name of the file
-     * @return the name of the file without its extension
-     */
-    public static String getFileNameWithoutExtension(String fileName) {
-        int dotIndex = fileName.lastIndexOf(".");
-        if (dotIndex == -1) {
-            return fileName;
-        } else {
-            return fileName.substring(0, dotIndex);
-        }
-    }
-
-    /**
-     * Deletes all files in a directory.
-     *
-     * @param directory the directory to delete
-     */
-    public static void deleteDirectory(File directory) {
-        if (directory.isDirectory()) {
-            File[] files = directory.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    if (file.isDirectory()) {
-                        deleteDirectory(file);
-                    } else {
-                        file.delete();
-                    }
+            BufferedImage inputImage = ImageIO.read(new File(inputFilePath));
+            float scaleFactor = brightnessPercentage / 100f;
+    
+            BufferedImage outputImage = new BufferedImage(inputImage.getWidth(), inputImage.getHeight(), inputImage.getType());
+    
+            for (int y = 0; y < inputImage.getHeight(); y++) {
+                for (int x = 0; x < inputImage.getWidth(); x++) {
+                    Color c = new Color(inputImage.getRGB(x, y));
+    
+                    int r = (int) Math.max(Math.min(scaleFactor * c.getRed(), 255), 0);
+                    int g = (int) Math.max(Math.min(scaleFactor * c.getGreen(), 255), 0);
+                    int b = (int) Math.max(Math.min(scaleFactor * c.getBlue(), 255), 0);
+    
+                    Color newColor = new Color(r, g, b);
+                    outputImage.setRGB(x, y, newColor.getRGB());
                 }
             }
+    
+            ImageIO.write(outputImage, outputFormat, new File(outputFilePath));
+            System.out.println("Image brightness adjusted: " + outputFilePath);
+        } catch (IOException e) {
+            System.out.println("Error adjusting image brightness: " + inputFilePath);
+            e.printStackTrace();
+        }
+    }    
+
+    public static String getFileNameWithoutExtension(String fileName) {
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex > 0) {
+            return fileName.substring(0, dotIndex);
+        } else {
+            return fileName;  
+        }
+    }
+
+    public static void convertImageToBW(String inputFilePath, String outputFilePath, String outputFormat) {
+        try {
+            BufferedImage original = ImageIO.read(new File(inputFilePath));
+            BufferedImage bw = new BufferedImage(original.getWidth(), original.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+            Graphics2D g = bw.createGraphics();
+            g.drawImage(original, 0, 0, null);
+            g.dispose();
+            ImageIO.write(bw, outputFormat, new File(outputFilePath));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
