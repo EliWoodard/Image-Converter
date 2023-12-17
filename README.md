@@ -65,7 +65,3 @@ If no arguments are provided, the program will convert all the images in the `Co
 - Multithreading: Implement multithreading to speed up the conversion process for large batches of images by processing multiple images simultaneously.
 
 - GUI interface: Develop a graphical user interface for the image converter that allows users to drag and drop images, preview the converted images, and easily adjust conversion settings.
-
-## Acknowledgments
-
-This program was created by Eli Woodard.
